@@ -1,0 +1,291 @@
+package com.yourname;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+
+import java.util.HashMap;
+import java.util.UUID;
+
+public class LevelPlugin extends JavaPlugin implements Listener {
+
+    private HashMap<UUID, Integer> playerLevels = new HashMap<>();
+    private HashMap<UUID, Integer> playerXP = new HashMap<>();
+    private HashMap<UUID, Integer> playerEnergy = new HashMap<>();
+    private HashMap<UUID, Integer> playerBarriers = new HashMap<>();
+    private HashMap<UUID, String> playerPowers = new HashMap<>();
+
+    @Override
+    public void onEnable() {
+        Bukkit.getPluginManager().registerEvents(this, this);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, this::regenerateEnergy, 0L, 20L);
+        getServer().getScheduler().scheduleSyncRepeatingTask(this, this::regenerateBarrier, 0L, 20L);
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (event.getEntity().getKiller() instanceof Player) {
+            Player player = (Player) event.getEntity().getKiller();
+            UUID playerId = player.getUniqueId();
+
+            // Adiciona XP
+            int xpGanho = 10; // Define a quantidade de XP que o jogador ganha
+            int xpAtual = playerXP.getOrDefault(playerId, 0) + xpGanho;
+            playerXP.put(playerId, xpAtual);
+
+            // Verifica e atualiza nível
+            int nivelAtual = playerLevels.getOrDefault(playerId, 1);
+            int xpNecessario = 100 * nivelAtual * 2; // Aumenta a dificuldade para subir de nível
+
+            if (xpAtual >= xpNecessario) {
+                playerLevels.put(playerId, nivelAtual + 1);
+                playerXP.put(playerId, xpAtual - xpNecessario);
+                player.sendMessage("Você subiu para o nível " + (nivelAtual + 1) + "!");
+                aumentarDificuldade(player, nivelAtual + 1);
+                aplicarGrau(player, nivelAtual + 1);
+            }
+        }
+    }
+
+    private void aumentarDificuldade(Player player, int nivel) {
+        // Implementar lógica para aumentar a dificuldade, como spawn de mobs ou aumento de dano
+    }
+
+    private void aplicarGrau(Player player, int nivel) {
+        String grau = determinarGrau(nivel);
+
+        switch (grau) {
+            case "Grau 4":
+                atribuirGrau4(player);
+                break;
+            case "Grau 3":
+                atribuirGrau3(player);
+                break;
+            case "Grau 2":
+                atribuirGrau2(player);
+                break;
+            case "Grau 1":
+                atribuirGrau1(player);
+                break;
+            case "Grau Especial":
+                atribuirGrauEspecial(player);
+                break;
+        }
+
+        player.sendMessage("Você atingiu o " + grau + "!");
+    }
+
+    private void atribuirGrau4(Player player) {
+        if (player.getInventory().firstEmpty() != -1) {
+            ItemStack bokken = new ItemStack(Material.IRON_SWORD);
+            ItemMeta meta = bokken.getItemMeta();
+            meta.setDisplayName("Bokken");
+            meta.addEnchant(Enchantment.DURABILITY, 50, true);
+            bokken.setItemMeta(meta);
+            player.getInventory().addItem(bokken);
+        }
+        player.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(30);
+        playerEnergy.put(player.getUniqueId(), 100);
+    }
+
+    private void atribuirGrau3(Player player) {
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 1, false, false));
+        playerEnergy.put(player.getUniqueId(), 500);
+    }
+
+    private void atribuirGrau2(Player player) {
+        playerEnergy.put(player.getUniqueId(), 1000);
+        playerBarriers.put(player.getUniqueId(), 50);
+    }
+
+    private void atribuirGrau1(Player player) {
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 2, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, Integer.MAX_VALUE, 1, false, false));
+        playerEnergy.put(player.getUniqueId(), 5000);
+    }
+
+    private void atribuirGrauEspecial(Player player) {
+        player.addPotionEffect(new PotionEffect(PotionEffectType.INCREASE_DAMAGE, Integer.MAX_VALUE, 4, false, false));
+        player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, Integer.MAX_VALUE, 5, false, false));
+        playerBarriers.put(player.getUniqueId(), 100);
+        playerEnergy.put(player.getUniqueId(), 10000);
+    }
+
+    private String determinarGrau(int nivel) {
+        if (nivel >= 50) {
+            return "Grau Especial";
+        } else if (nivel >= 40) {
+            return "Meio Grau Especial";
+        } else if (nivel >= 30) {
+            return "Grau 1";
+        } else if (nivel >= 20) {
+            return "Grau 2";
+        } else if (nivel >= 10) {
+            return "Grau 3";
+        } else {
+            return "Grau 4";
+        }
+    }
+
+    private void regenerateEnergy() {
+        for (UUID playerId : playerLevels.keySet()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                int nivel = playerLevels.get(playerId);
+                int energiaAtual = playerEnergy.getOrDefault(playerId, 0);
+                int maxEnergia = obterMaxEnergia(nivel);
+
+                if (energiaAtual < maxEnergia) {
+                    playerEnergy.put(playerId, energiaAtual + 1);
+                }
+            }
+        }
+    }
+
+    private int obterMaxEnergia(int nivel) {
+        if (nivel >= 50) {
+            return 10000;
+        } else if (nivel >= 40) {
+            return 5000;
+        } else if (nivel >= 30) {
+            return 1000;
+        } else if (nivel >= 20) {
+            return 500;
+        } else {
+            return 100;
+        }
+    }
+
+    private void regenerateBarrier() {
+        for (UUID playerId : playerLevels.keySet()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                int maxBarreira = playerBarriers.getOrDefault(playerId, 0);
+
+                if (maxBarreira < 50) {
+                    playerBarriers.put(playerId, maxBarreira + 1);
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerAttack(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof Player) {
+            Player player = (Player) event.getDamager();
+            UUID playerId = player.getUniqueId();
+            int nivel = playerLevels.getOrDefault(playerId, 1);
+
+            // Lógica para o ataque do jogador, usando poderes específicos
+            // Implementar efeitos visuais, sons e outros comportamentos
+        }
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("Este comando só pode ser usado por jogadores.");
+            return false;
+        }
+
+        Player player = (Player) sender;
+        UUID playerId = player.getUniqueId();
+
+        if (args.length > 0) {
+            switch (args[0].toLowerCase()) {
+                case "jujutso":
+                    int nivel = playerLevels.getOrDefault(playerId, 1);
+                    player.sendMessage("Seu nível atual é: " + nivel);
+                    break;
+                case "grau":
+                    String grau = determinarGrau(playerLevels.getOrDefault(playerId, 1));
+                    player.sendMessage("Seu grau atual é: " + grau);
+                    break;
+                case "energia":
+                    int energia = playerEnergy.getOrDefault(playerId, 0);
+                    player.sendMessage("Sua energia atual é: " + energia);
+                    break;
+                case "barreira":
+                    int barreira = playerBarriers.getOrDefault(playerId, 0);
+                    player.sendMessage("Sua barreira atual é: " + barreira);
+                    break;
+                case "poder":
+                    String poder = playerPowers.getOrDefault(playerId, "Nenhum poder selecionado");
+                    player.sendMessage("Seu poder atual é: " + poder);
+                    break;
+                default:
+                    player.sendMessage("Comando desconhecido.");
+                    break;
+            }
+        }
+
+        if (sender.hasPermission("levelplugin.admin")) {
+            if (args.length >= 2) {
+                Player target = Bukkit.getPlayer(args[0]);
+                if (target != null) {
+                    UUID targetId = target.getUniqueId();
+                    switch (args[0].toLowerCase()) {
+                        case "setgrau":
+                            int grau = Integer.parseInt(args[1]);
+                            playerLevels.put(targetId, grau);
+                            target.sendMessage("Seu grau foi definido para " + grau);
+                            aplicarGrau(target, grau);
+                            break;
+                        case "setnivel":
+                            int nivel = Integer.parseInt(args[1]);
+                            playerLevels.put(targetId, nivel);
+                            target.sendMessage("Seu nível foi definido para " + nivel);
+                            break;
+                        case "setpoder":
+                            String poder = args[1];
+                            playerPowers.put(targetId, poder);
+                            target.sendMessage("Seu poder foi definido para " + poder);
+                            break;
+                        case "addbarreira":
+                            int adicionarBarreira = Integer.parseInt(args[1]);
+                            int barreiraAtual = playerBarriers.getOrDefault(targetId, 0);
+                            playerBarriers.put(targetId, barreiraAtual + adicionarBarreira);
+                            target.sendMessage("Sua barreira aumentou em " + adicionarBarreira);
+                            break;
+                        case "setbarreira":
+                            int novaBarreira = Integer.parseInt(args[1]);
+                            playerBarriers.put(targetId, novaBarreira);
+                            target.sendMessage("Sua barreira foi definida para " + novaBarreira);
+                            break;
+                        case "setenergia":
+                            int novaEnergia = Integer.parseInt(args[1]);
+                            playerEnergy.put(targetId, novaEnergia);
+                            target.sendMessage("Sua energia foi definida para " + novaEnergia);
+                            break;
+                        default:
+                            sender.sendMessage("Comando desconhecido.");
+                            break;
+                    }
+                } else {
+                    sender.sendMessage("Jogador não encontrado.");
+                }
+            } else {
+                sender.sendMessage("Uso incorreto do comando.");
+            }
+        }
+
+        return true;
+    }
+}

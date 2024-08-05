@@ -1,0 +1,39 @@
+name: LevelPlugin
+version: 1.1
+main: com.yourname.LevelPlugin
+api-version: 1.13
+commands:
+  jujutso:
+    description: Veja seu nível atual.
+  grau:
+    description: Veja seu grau atual.
+  energia:
+    description: Veja sua energia atual.
+  poder:
+    description: Veja suas habilidades de poder.
+  barreira:
+    description: Veja a quantidade de vida da sua barreira.
+  setgrau:
+    description: Define o grau de um jogador.
+    usage: /setgrau <player> <grau>
+    permission: levelplugin.admin
+  setnivel:
+    description: Define o nível de um jogador.
+    usage: /setnivel <player> <nível>
+    permission: levelplugin.admin
+  setpoder:
+    description: Define o poder de um jogador.
+    usage: /setpoder <player> <habilidade>
+    permission: levelplugin.admin
+  addbarreira:
+    description: Adiciona vida à barreira de um jogador.
+    usage: /addbarreira <player> <quantidade>
+    permission: levelplugin.admin
+  setbarreira:
+    description: Define a vida da barreira de um jogador.
+    usage: /setbarreira <player> <vida>
+    permission: levelplugin.admin
+  setenergia:
+    description: Define a energia de um jogador.
+    usage: /setenergia <player> <energia>
+    permission: levelplugin.admin
